@@ -259,6 +259,37 @@ tool's behavior given an ordering, but not GitHub's actual event concurrency.
 
 ---
 
+## 5c. Real-world validation on GitHub (✅ DONE)
+
+Validated end-to-end in `Mcbeer/auto-releaser-sandbox` (private pnpm workspace mirroring kc-bff:
+`@sandbox/bff` bundling `@sandbox/games`→`util`→`types`, plus a `catalog:` external). Tool vendored
+under `.release-tool/`, run via `node ./.release-tool/src/cli.ts` (npx/CLI form).
+
+Full lifecycle that PASSED on real Actions:
+1. `feat` in `@sandbox/games` merged → push workflow ran → release PR "chore(release): bff 1.1.0"
+   opened with correct `package.json` (1.0.0→1.1.0) + grouped CHANGELOG.
+2. Release PR squash-merged → **two runs fired simultaneously**: `release-tag` (pull_request)
+   = success, created `bff-v1.1.0`; `release` (push) = **skipped** via the `chore(release):` guard.
+   ✅ **The push/tag race did NOT occur** — the guard worked; no spurious bump.
+3. Next `feat` → tool computed `1.2.0` (one step above released 1.1.0). ✅ **No drift.**
+
+### Real-environment gotchas (local testing could NOT catch these)
+- `pnpm/action-setup@v4` requires a pnpm version — fixed by adding `packageManager` to root
+  `package.json` (the real monorepo already pins this).
+- **"GitHub Actions is not permitted to create or approve pull requests"** — a repo/org setting,
+  off by default. Must enable `default_workflow_permissions=write` +
+  `can_approve_pull_request_reviews=true` (Settings → Actions, or the API). This will need
+  enabling on the real kids-app-platform repo.
+
+### Still NOT validated
+- `merge_commit_sha` checkout path under squash (tag workflow used it; run succeeded but not
+  asserted in isolation).
+- Multi-project repos (sandbox tracks one project).
+- Concurrency under rapid successive merges (only sequential merges tested).
+- Distribution as a real `uses:` Action (action.yml) — still deferred; tested vendored CLI form.
+
+---
+
 ## 6. Remaining unverified items (do before/while implementing)
 
 1. ⚠️ Run the pnpm closure command on the **target repo's pnpm 9.x** (all testing was on 11.x).
