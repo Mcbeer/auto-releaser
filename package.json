@@ -1,0 +1,21 @@
+{
+  "name": "@lego/dep-aware-release",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "dep-aware-release": "./src/cli.ts"
+  },
+  "scripts": {
+    "test": "node --test",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-exclude='**/.cache/**' --test-coverage-exclude='**/*.test.ts'",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  }
+}
