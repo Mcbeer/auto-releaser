@@ -5,6 +5,7 @@ import {
   handleReleasePrMerged,
   releaseBranch,
   isReleaseBranch,
+  isReleaseCommit,
 } from "./lifecycle.ts";
 import type { GitHubGateway, PullRequestUpsert } from "./gateway.ts";
 import type { ProjectResult } from "../orchestrate.ts";
@@ -43,6 +44,13 @@ test("branch helpers", () => {
   assert.equal(releaseBranch("kc-bff"), "release/kc-bff");
   assert.ok(isReleaseBranch("release/kc-bff"));
   assert.ok(!isReleaseBranch("feature/x"));
+});
+
+test("isReleaseCommit guards our own release commits (prevents re-bump drift)", () => {
+  assert.ok(isReleaseCommit("chore(release): bff 1.3.0"));
+  assert.ok(isReleaseCommit("chore(release): bff 1.3.0 (#4)"));
+  assert.ok(!isReleaseCommit("feat: a normal feature"));
+  assert.ok(!isReleaseCommit("fix(games): bug"));
 });
 
 test("handlePush upserts one PR per changed project, scoped to its files", async () => {

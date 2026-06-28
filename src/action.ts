@@ -11,7 +11,7 @@ import { createGitReader } from "./git.ts";
 import { resolvers, renderers } from "./builtins.ts";
 import { run } from "./orchestrate.ts";
 import { createOctokitGateway, type OctokitLike } from "./github/octokit.ts";
-import { handlePush, handleReleasePrMerged } from "./github/lifecycle.ts";
+import { handlePush, handleReleasePrMerged, isReleaseCommit } from "./github/lifecycle.ts";
 import type { ReleaseContext } from "./types.ts";
 
 function readVersion(repoRoot: string, projectPath: string): string {
@@ -53,6 +53,15 @@ async function main(): Promise<void> {
   }
 
   // push (default): run the tool, then upsert per-project release PRs.
+  // Guard: skip our own release commits so merging a release PR doesn't re-bump
+  // on top of an un-tagged release commit (the tag handler owns that commit).
+  const headCommitMessage = (github.context.payload.head_commit as { message?: string } | undefined)?.message ?? "";
+  if (isReleaseCommit(headCommitMessage)) {
+    core.info("HEAD is a release commit; skipping (the tag step owns it).");
+    core.setOutput("hasChanges", "false");
+    return;
+  }
+
   const ctx: ReleaseContext = {
     repoRoot,
     config,

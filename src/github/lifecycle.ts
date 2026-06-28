@@ -23,6 +23,16 @@ export function isReleaseBranch(headRef: string): boolean {
 }
 
 /**
+ * True if a push HEAD commit is one of our own release commits. The push that
+ * results from merging a release PR must NOT trigger another bump (it would
+ * re-bump on top of an un-tagged release commit — verified drift bug). The tag
+ * is created by the pull_request:closed handler instead.
+ */
+export function isReleaseCommit(headCommitMessage: string): boolean {
+  return headCommitMessage.startsWith("chore(release):");
+}
+
+/**
  * On push to the base branch: for each changed project, upsert its rolling
  * release PR (scoped to only that project's files). Returns the PRs touched.
  */

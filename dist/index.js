@@ -24420,6 +24420,9 @@ function releaseBranch(tagPrefix) {
 function isReleaseBranch(headRef) {
   return headRef.startsWith(RELEASE_BRANCH_PREFIX);
 }
+function isReleaseCommit(headCommitMessage) {
+  return headCommitMessage.startsWith("chore(release):");
+}
 async function handlePush(gw, baseBranch, results) {
   const touched = [];
   for (const r of results) {
@@ -24483,6 +24486,12 @@ async function main() {
     );
     if (out === null) core.info("Merged PR is not a release branch; ignoring.");
     else core.info(`${out.created ? "Created" : "Already exists"}: ${out.tag}`);
+    return;
+  }
+  const headCommitMessage = github.context.payload.head_commit?.message ?? "";
+  if (isReleaseCommit(headCommitMessage)) {
+    core.info("HEAD is a release commit; skipping (the tag step owns it).");
+    core.setOutput("hasChanges", "false");
     return;
   }
   const ctx = {
