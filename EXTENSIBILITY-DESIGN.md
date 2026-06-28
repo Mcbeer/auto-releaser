@@ -296,9 +296,13 @@ Sandbox extended to track TWO projects (`bff` + `admin`, both bundling `@sandbox
 Multi-project real-environment gotchas caught:
 - `--frozen-lockfile` fails if `pnpm-lock.yaml` isn't regenerated after adding a package
   (`pnpm install --lockfile-only --config.confirmModulesPurge=false`).
-- PR body/changelog notes are NOT threaded through the matrix (only tagPrefix/path/version);
-  per-project PRs currently rely on the action's default body. Notes-in-PR-body is a regression
-  vs the single-project workflow — revisit if changelog-in-PR-description matters.
+
+✅ RESOLVED — changelog notes in per-project PR bodies: notes are embedded in each
+`changedProjects[]` object. `JSON.stringify` escapes newlines → survives the single-line
+`GITHUB_OUTPUT` value → `fromJSON` in the matrix recovers the multiline markdown → used as the PR
+`body:`. Verified on real Actions: both PRs rendered correct grouped-by-package changelogs
+(admin's PR even grouped two source packages). Unit-tested via buildOutputs (src/outputs.ts) incl.
+the critical multiline round-trip.
 
 ### Still NOT validated
 - `merge_commit_sha` checkout path under squash (tag workflow used it; runs succeeded but not
