@@ -92,13 +92,17 @@ async function main(): Promise<void> {
 
   // Resolve each project's extraFiles globs (e.g. "dist/**") to concrete
   // repo-relative paths, so built artifacts ride in the release PR commit.
-  const { globSync } = await import("node:fs");
+  const { globSync, statSync } = await import("node:fs");
+  const { join: pjoin } = await import("node:path");
   const extraFilesFor = (projectPath: string): string[] => {
     const proj = config.trackedProjects.find((p) => p.path === projectPath);
     const globs = proj?.extraFiles ?? [];
     const files = new Set<string>();
     for (const g of globs) {
-      for (const f of globSync(g, { cwd: repoRoot })) files.add(f);
+      for (const f of globSync(g, { cwd: repoRoot })) {
+        // Globs like "dist/**" also match directories; keep only regular files.
+        if (statSync(pjoin(repoRoot, f)).isFile()) files.add(f);
+      }
     }
     return [...files];
   };

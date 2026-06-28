@@ -24530,13 +24530,16 @@ async function main() {
   });
   const { applyResult: applyResult2 } = await Promise.resolve().then(() => (init_writers(), writers_exports));
   for (const r of results) applyResult2(repoRoot, r);
-  const { globSync } = await import("node:fs");
+  const { globSync, statSync } = await import("node:fs");
+  const { join: pjoin } = await import("node:path");
   const extraFilesFor = (projectPath) => {
     const proj = config.trackedProjects.find((p) => p.path === projectPath);
     const globs = proj?.extraFiles ?? [];
     const files = /* @__PURE__ */ new Set();
     for (const g of globs) {
-      for (const f of globSync(g, { cwd: repoRoot })) files.add(f);
+      for (const f of globSync(g, { cwd: repoRoot })) {
+        if (statSync(pjoin(repoRoot, f)).isFile()) files.add(f);
+      }
     }
     return [...files];
   };
