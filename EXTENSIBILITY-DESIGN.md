@@ -281,10 +281,28 @@ Full lifecycle that PASSED on real Actions:
   `can_approve_pull_request_reviews=true` (Settings → Actions, or the API). This will need
   enabling on the real kids-app-platform repo.
 
+### Multi-project — ✅ VALIDATED on real GitHub
+Sandbox extended to track TWO projects (`bff` + `admin`, both bundling `@sandbox/games`).
+- Code audit: orchestrate/cli/writers all loop correctly; only gap was missing duplicate-PATH
+  validation (two prefixes → same folder → CHANGELOG overwrite). FIXED + tested.
+- Tool emits `changedProjects` JSON; the push workflow uses a **matrix** (`detect` job →
+  per-project `release-pr` jobs), each PR scoped to its project via `add-paths`.
+- Verified on Actions: a shared-dep `feat` opened TWO isolated PRs (`release/bff` with only
+  `apps/bff/*`; `release/admin` with only `apps/admin/*`). Merging both created independent tags
+  `bff-v1.2.0` + `admin-v3.1.0`; both push jobs skipped via the `chore(release):` guard.
+- Isolation confirmed: an admin-only `fix` produced `changedProjects` containing ONLY admin
+  (3.1.0→3.1.1); bff correctly absent.
+
+Multi-project real-environment gotchas caught:
+- `--frozen-lockfile` fails if `pnpm-lock.yaml` isn't regenerated after adding a package
+  (`pnpm install --lockfile-only --config.confirmModulesPurge=false`).
+- PR body/changelog notes are NOT threaded through the matrix (only tagPrefix/path/version);
+  per-project PRs currently rely on the action's default body. Notes-in-PR-body is a regression
+  vs the single-project workflow — revisit if changelog-in-PR-description matters.
+
 ### Still NOT validated
-- `merge_commit_sha` checkout path under squash (tag workflow used it; run succeeded but not
+- `merge_commit_sha` checkout path under squash (tag workflow used it; runs succeeded but not
   asserted in isolation).
-- Multi-project repos (sandbox tracks one project).
 - Concurrency under rapid successive merges (only sequential merges tested).
 - Distribution as a real `uses:` Action (action.yml) — still deferred; tested vendored CLI form.
 
