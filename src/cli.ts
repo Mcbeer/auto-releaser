@@ -39,12 +39,21 @@ const logger: Logger = {
 
 /** Emit GitHub Actions outputs. Per-project keys + an aggregate hasChanges. */
 function emitOutputs(results: readonly ProjectResult[]): void {
-  const anyChanges = results.some((r) => r.release !== null);
-  const lines: string[] = [`hasChanges=${anyChanges}`];
+  const changed = results.filter((r) => r.release !== null);
+  const lines: string[] = [`hasChanges=${changed.length > 0}`];
 
-  for (const r of results) {
-    if (r.release === null) continue;
-    lines.push(`${r.tagPrefix}_version=${r.release.nextVersion}`);
+  // Machine-readable list of changed projects so the workflow can drive a matrix
+  // (one PR per changed project) without hardcoding project names. Each entry
+  // carries everything a per-project PR step needs.
+  const changedProjects = changed.map((r) => ({
+    tagPrefix: r.tagPrefix,
+    path: r.projectPath,
+    version: r.release!.nextVersion,
+  }));
+  lines.push(`changedProjects=${JSON.stringify(changedProjects)}`);
+
+  for (const r of changed) {
+    lines.push(`${r.tagPrefix}_version=${r.release!.nextVersion}`);
     // multiline notes use the heredoc form GitHub Actions requires
     const delim = `NOTES_${r.tagPrefix}_EOF`;
     lines.push(`${r.tagPrefix}_notes<<${delim}`, r.notes.trimEnd(), delim);
