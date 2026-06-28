@@ -1,0 +1,40 @@
+# CI for THIS repo — which is a bundled GitHub Action, not a tracked-projects
+# monorepo. (The dep-aware release model applies to CONSUMERS of this action, not
+# to the action's own repo.) So CI here = test + typecheck + a dist-drift guard
+# that fails if dist/index.js was not rebuilt after a source change. That guard is
+# the classic JS-action footgun: a stale committed bundle ships old behaviour
+# under a tag while the source looks updated.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Verify dist/ is in sync with source
+        run: |
+          pnpm build
+          if ! git diff --quiet -- dist/; then
+            echo "::error::dist/ is out of date. Run 'pnpm build' and commit the result."
+            git diff --stat -- dist/
+            exit 1
+          fi
+          echo "dist/ is in sync."

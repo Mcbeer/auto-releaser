@@ -77,58 +77,89 @@ project's last matching tag. No manifest file to drift.
 
 ---
 
-## GitHub lifecycle (two workflows)
+## Usage (single self-contained Action)
 
-The tool runs on every push to `main`. Tagging is a **separate** workflow that fires only
-when a release PR merges. This split is what keeps versions stable (no drift) across repeated
-merges.
+Add **one** workflow. The Action owns the whole lifecycle — it creates/updates release PRs
+and creates tags + releases itself via the GitHub API (no external actions, no matrix to
+wire). This mirrors how `release-please-action` is consumed.
+
+```yaml
+# .github/workflows/release.yml
+name: release
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [closed]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # full history + tags
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - uses: Mcbeer/auto-releaser@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # config: release.json   # optional, this is the default
+```
+
+> Repo setting required: **Settings → Actions → Workflow permissions → Allow GitHub Actions
+> to create and approve pull requests.** Also: PRs/tags created with the default `GITHUB_TOKEN`
+> do not trigger other workflows — use a PAT as `token` if you need CI to run on release PRs.
+
+### Lifecycle
 
 ```mermaid
 sequenceDiagram
     participant Dev
     participant main as main branch
-    participant Push as release.yml (on push)
+    participant Act as auto-releaser action
     participant PR as Release PR
-    participant Tag as release-tag.yml (on PR merge)
 
     Dev->>main: merge feature (feat: …)
-    main->>Push: push event
-    Push->>Push: run tool → hasChanges?
-    Push->>PR: open/update rolling release PR<br/>(branch release/<prefix>)
-    Note over PR: package.json bumped +<br/>CHANGELOG.md, version stable<br/>across further merges
+    main->>Act: push event
+    Act->>Act: run pipeline → changed projects?
+    Act->>PR: create/update one rolling PR per project<br/>(branch release/<prefix>, scoped files, grouped changelog body)
+    Note over PR: version stable across further merges
 
-    Dev->>PR: merge the release PR
+    Dev->>PR: merge a release PR
     PR->>main: squash commit "chore(release): …"
-    main->>Push: push event
-    Push--xPush: SKIPPED (chore(release): guard)
-    PR->>Tag: pull_request closed + merged
-    Tag->>main: create tag <prefix>-vX.Y.Z + GitHub release
+    main->>Act: push event
+    Act--xAct: SKIPPED (chore(release): guard — no re-bump)
+    PR->>Act: pull_request closed + merged
+    Act->>main: create tag <prefix>-vX.Y.Z + GitHub release
 ```
 
-**The race guard:** merging the release PR pushes to `main` *and* triggers the tag workflow.
-The push workflow skips any `chore(release):` commit so it never re-bumps on top of an
-un-tagged release commit. (Verified on real Actions — see `EXTENSIBILITY-DESIGN.md §5b/§5c`.)
+**The race guard:** merging a release PR pushes to `main` *and* fires the `pull_request:closed`
+event. The push run skips any `chore(release):` commit, so it never re-bumps on top of an
+un-tagged release commit; the merge handler creates the tag. (Verified on real Actions — a
+missing guard produced a real spurious re-bump during development; see `EXTENSIBILITY-DESIGN.md`.)
 
 ---
 
 ## Multi-project releases
 
-One tool run handles all tracked projects. Each project's files live under its own path,
-so the push workflow uses a **matrix** to open one isolated PR per changed project.
+One Action run handles all tracked projects. Each project's files live under its own path, so
+the Action opens one isolated PR per changed project — each with only its files and its own
+grouped-by-package changelog as the PR body.
 
 ```mermaid
 flowchart TD
-    push["push to main"] --> detect
+    push["push to main"] --> act["auto-releaser action<br/>(one run)"]
 
-    subgraph detect["detect job"]
-        tool["run tool once →<br/>changedProjects JSON<br/>(incl. per-project notes)"]
-    end
+    act --> bffpr["PR release/bff<br/>only apps/bff/** + bff changelog"]
+    act --> adminpr["PR release/admin<br/>only apps/admin/** + admin changelog"]
 
-    detect -->|matrix: one job per changed project| m
-
-    subgraph m["release-pr (matrix)"]
-        bffjob["bff → PR release/bff<br/>add-paths: apps/bff/**<br/>body = bff notes"]
-        adminjob["admin → PR release/admin<br/>add-paths: apps/admin/**<br/>body = admin notes"]
+    subgraph legacy[" "]
+        bffjob["(per-project PRs are created<br/>directly via the GitHub API)"]
+        adminjob["(no matrix, no create-pull-request)"]
     end
 ```
 
