@@ -67,7 +67,7 @@ test("handlePush upserts one PR per changed project, scoped to its files", async
   assert.equal(upserts[1]?.headBranch, "release/admin");
 });
 
-test("handlePush includes extraFiles in the PR commit when provided", async () => {
+test("handlePush includes extraFiles; root project '.' yields clean paths (no ./)", async () => {
   const { gw, upserts } = fakeGateway();
   await handlePush(
     gw,
@@ -75,7 +75,14 @@ test("handlePush includes extraFiles in the PR commit when provided", async () =
     [result("tool", ".", "1.1.0", "## 1.1.0")],
     (p) => (p === "." ? ["dist/index.js"] : []),
   );
-  assert.deepEqual(upserts[0]?.files, ["./package.json", "./CHANGELOG.md", "dist/index.js"]);
+  // root project must NOT produce "./package.json" (Git tree API rejects it)
+  assert.deepEqual(upserts[0]?.files, ["package.json", "CHANGELOG.md", "dist/index.js"]);
+});
+
+test("handlePush uses nested paths for non-root projects", async () => {
+  const { gw, upserts } = fakeGateway();
+  await handlePush(gw, "main", [result("bff", "apps/bff", "1.1.0", "x")]);
+  assert.deepEqual(upserts[0]?.files, ["apps/bff/package.json", "apps/bff/CHANGELOG.md"]);
 });
 
 test("handlePush opens nothing when no project changed", async () => {

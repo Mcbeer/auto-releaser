@@ -24425,6 +24425,9 @@ var RELEASE_BRANCH_PREFIX = "release/";
 function releaseBranch(tagPrefix) {
   return `${RELEASE_BRANCH_PREFIX}${tagPrefix}`;
 }
+function projectFile(projectPath, file) {
+  return projectPath === "." || projectPath === "" ? file : `${projectPath}/${file}`;
+}
 function isReleaseBranch(headRef) {
   return headRef.startsWith(RELEASE_BRANCH_PREFIX);
 }
@@ -24438,8 +24441,8 @@ async function handlePush(gw, baseBranch, results, extraFilesFor = () => []) {
     const head = releaseBranch(r.tagPrefix);
     const version = r.release.nextVersion;
     const files = [
-      `${r.projectPath}/package.json`,
-      `${r.projectPath}/CHANGELOG.md`,
+      projectFile(r.projectPath, "package.json"),
+      projectFile(r.projectPath, "CHANGELOG.md"),
       ...extraFilesFor(r.projectPath)
     ];
     const { number } = await gw.upsertPullRequest({

@@ -17,6 +17,15 @@ export function releaseBranch(tagPrefix: string): string {
   return `${RELEASE_BRANCH_PREFIX}${tagPrefix}`;
 }
 
+/**
+ * Join a project path + filename into a repo-relative path the Git tree API
+ * accepts. Root projects use path "." which must NOT produce "./package.json"
+ * (the API rejects "./" as a malformed path component) — just "package.json".
+ */
+export function projectFile(projectPath: string, file: string): string {
+  return projectPath === "." || projectPath === "" ? file : `${projectPath}/${file}`;
+}
+
 /** Is this merged PR one of our release PRs? (release/<prefix>) */
 export function isReleaseBranch(headRef: string): boolean {
   return headRef.startsWith(RELEASE_BRANCH_PREFIX);
@@ -52,8 +61,8 @@ export async function handlePush(
     const version = r.release.nextVersion;
 
     const files = [
-      `${r.projectPath}/package.json`,
-      `${r.projectPath}/CHANGELOG.md`,
+      projectFile(r.projectPath, "package.json"),
+      projectFile(r.projectPath, "CHANGELOG.md"),
       ...extraFilesFor(r.projectPath),
     ];
 
