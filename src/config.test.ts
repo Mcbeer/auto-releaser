@@ -57,6 +57,19 @@ test("rejects duplicate tagPrefix (tags would collide)", () => {
   );
 });
 
+test("rejects duplicate path (projects would overwrite each other)", () => {
+  assert.throws(
+    () =>
+      validateConfig({
+        trackedProjects: [
+          { path: "apps/bff", tagPrefix: "a" },
+          { path: "apps/bff", tagPrefix: "b" },
+        ],
+      }),
+    /Duplicate path/,
+  );
+});
+
 test("rejects invalid bump value in commitTypes", () => {
   assert.throws(
     () => validateConfig({ ...minimal, commitTypes: { feat: "huge" } }),

@@ -73,6 +73,7 @@ function validateTrackedProjects(v: unknown): TrackedProject[] {
     throw new ConfigError(`"trackedProjects" must be a non-empty array.`);
   }
   const seenPrefixes = new Set<string>();
+  const seenPaths = new Set<string>();
   return v.map((entry, i) => {
     if (typeof entry !== "object" || entry === null) {
       throw new ConfigError(`trackedProjects[${i}] must be an object.`);
@@ -89,7 +90,11 @@ function validateTrackedProjects(v: unknown): TrackedProject[] {
     if (seenPrefixes.has(tagPrefix)) {
       throw new ConfigError(`Duplicate tagPrefix "${tagPrefix}" — tags would collide.`);
     }
+    if (seenPaths.has(path)) {
+      throw new ConfigError(`Duplicate path "${path}" — projects would overwrite each other's files.`);
+    }
     seenPrefixes.add(tagPrefix);
+    seenPaths.add(path);
     return { path, tagPrefix };
   });
 }

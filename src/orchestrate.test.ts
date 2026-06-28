@@ -100,3 +100,59 @@ test("throws if a tracked project is not a workspace package", async () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("two tracked projects get independent releases (multi-project)", async () => {
+  // Two apps: bff (bundles shared) and admin (bundles shared too). A change in
+  // shared bumps BOTH; a change only in admin bumps only admin.
+  const root = mkdtempSync(join(tmpdir(), "orch-multi-"));
+  try {
+    for (const p of ["apps/bff", "apps/admin", "packages/shared"]) {
+      mkdirSync(join(root, p), { recursive: true });
+    }
+    writeFileSync(join(root, "apps/bff/package.json"), JSON.stringify({ name: "@m/bff", version: "1.0.0" }));
+    writeFileSync(join(root, "apps/admin/package.json"), JSON.stringify({ name: "@m/admin", version: "2.0.0" }));
+
+    const config: ReleaseConfig = {
+      resolver: "fake",
+      changelogRenderer: "grouped-by-package",
+      trackedProjects: [
+        { path: "apps/bff", tagPrefix: "bff" },
+        { path: "apps/admin", tagPrefix: "admin" },
+      ],
+      commitTypes: { feat: "minor", fix: "patch" },
+      includeDev: false,
+    };
+    const git: GitReader = {
+      // one feat in shared, one fix only in admin
+      log: async () => [
+        { sha: "a".repeat(40), message: "feat: shared change", changedPaths: ["packages/shared/x.ts"] },
+        { sha: "b".repeat(40), message: "fix: admin only", changedPaths: ["apps/admin/y.ts"] },
+      ],
+      lastTag: async (prefix) => `${prefix}-v${prefix === "bff" ? "1.0.0" : "2.0.0"}`,
+    };
+    const ctx: ReleaseContext = { repoRoot: root, config, logger: { info() {}, warn() {} }, git };
+
+    const resolver: WorkspaceGraphProvider = {
+      name: "fake",
+      readWorkspaceGraph: async () => ({
+        packages: [
+          { name: "@m/bff", dir: join(root, "apps/bff"), internalDeps: ["@m/shared"], internalDevDeps: [] },
+          { name: "@m/admin", dir: join(root, "apps/admin"), internalDeps: ["@m/shared"], internalDevDeps: [] },
+          { name: "@m/shared", dir: join(root, "packages/shared"), internalDeps: [], internalDevDeps: [] },
+        ],
+      }),
+    };
+
+    const results = await run(ctx, { resolver, renderer: groupedByPackageRenderer });
+    const byPrefix = Object.fromEntries(results.map((r) => [r.tagPrefix, r]));
+
+    // bff: only the shared feat is in its closure -> minor 1.0.0 -> 1.1.0
+    assert.equal(byPrefix["bff"]?.release?.nextVersion, "1.1.0");
+    // admin: shared feat (minor) AND its own fix -> max bump minor -> 2.0.0 -> 2.1.0
+    assert.equal(byPrefix["admin"]?.release?.nextVersion, "2.1.0");
+    // independent: two distinct results, distinct prefixes
+    assert.equal(results.length, 2);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
