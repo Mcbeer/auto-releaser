@@ -9,6 +9,7 @@ import { loadConfig, pathForTagPrefix } from "./config.ts";
 import { createGitReader } from "./git.ts";
 import { resolvers, renderers } from "./builtins.ts";
 import { run, type ProjectResult } from "./orchestrate.ts";
+import { buildOutputs } from "./outputs.ts";
 import { applyResult } from "./writers.ts";
 import type { Logger, ReleaseContext } from "./types.ts";
 
@@ -37,29 +38,9 @@ const logger: Logger = {
   warn: (m) => console.error(`[release] WARN ${m}`),
 };
 
-/** Emit GitHub Actions outputs. Per-project keys + an aggregate hasChanges. */
+/** Emit GitHub Actions outputs (string built by buildOutputs; CLI does the IO). */
 function emitOutputs(results: readonly ProjectResult[]): void {
-  const changed = results.filter((r) => r.release !== null);
-  const lines: string[] = [`hasChanges=${changed.length > 0}`];
-
-  // Machine-readable list of changed projects so the workflow can drive a matrix
-  // (one PR per changed project) without hardcoding project names. Each entry
-  // carries everything a per-project PR step needs.
-  const changedProjects = changed.map((r) => ({
-    tagPrefix: r.tagPrefix,
-    path: r.projectPath,
-    version: r.release!.nextVersion,
-  }));
-  lines.push(`changedProjects=${JSON.stringify(changedProjects)}`);
-
-  for (const r of changed) {
-    lines.push(`${r.tagPrefix}_version=${r.release!.nextVersion}`);
-    // multiline notes use the heredoc form GitHub Actions requires
-    const delim = `NOTES_${r.tagPrefix}_EOF`;
-    lines.push(`${r.tagPrefix}_notes<<${delim}`, r.notes.trimEnd(), delim);
-  }
-
-  const out = lines.join("\n") + "\n";
+  const out = buildOutputs(results);
   process.stdout.write(out); // human-visible + pipeable
   const ghOutput = process.env["GITHUB_OUTPUT"];
   if (ghOutput) appendFileSync(ghOutput, out);
