@@ -7,9 +7,14 @@ await build({
   bundle: true,
   platform: "node",
   target: "node20",
-  format: "cjs",
+  // ESM to match package.json "type":"module" — a CJS bundle would hit
+  // "require is not defined" at runtime (verified failure on real Actions).
+  format: "esm",
   outfile: "dist/index.js",
-  // Octokit/undici bundle cleanly (verified); nothing to mark external.
+  // Some bundled deps reference require/__dirname; shim them for ESM output.
+  banner: {
+    js: "import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url); import { fileURLToPath as __ftu } from 'url'; import { dirname as __dn } from 'path'; const __filename = __ftu(import.meta.url); const __dirname = __dn(__filename);",
+  },
 });
 
 console.log("built dist/index.js");
