@@ -67,6 +67,17 @@ test("handlePush upserts one PR per changed project, scoped to its files", async
   assert.equal(upserts[1]?.headBranch, "release/admin");
 });
 
+test("handlePush includes extraFiles in the PR commit when provided", async () => {
+  const { gw, upserts } = fakeGateway();
+  await handlePush(
+    gw,
+    "main",
+    [result("tool", ".", "1.1.0", "## 1.1.0")],
+    (p) => (p === "." ? ["dist/index.js"] : []),
+  );
+  assert.deepEqual(upserts[0]?.files, ["./package.json", "./CHANGELOG.md", "dist/index.js"]);
+});
+
 test("handlePush opens nothing when no project changed", async () => {
   const { gw, upserts } = fakeGateway();
   const touched = await handlePush(gw, "main", [result("bff", "apps/bff", null)]);

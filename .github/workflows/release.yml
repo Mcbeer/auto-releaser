@@ -1,0 +1,56 @@
+# Dogfooding: this action releases ITSELF. Tracks the repo as a single root
+# project (release.json: path ".", tagPrefix "dep-aware-release", extraFiles
+# ["dist/**"] so the rebuilt bundle ships in the release PR).
+#
+# On push: build dist, then run the action (local ./) to open/update the release
+# PR (which includes dist/). On release-PR merge: the action creates the native
+# tag dep-aware-release-vX.Y.Z, and we derive the action-facing v1 / vX.Y.Z tags
+# from its outputs so `uses: Mcbeer/auto-releaser@v1` keeps working.
+name: release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Ensure dist/ is current so the release PR commits an in-sync bundle.
+      - run: pnpm build
+
+      # Use the local action (this repo IS the action).
+      - id: release
+        uses: ./
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # On a merged release PR, derive the action-facing tags from the native tag.
+      - name: Move floating v1 + semver tag
+        if: ${{ steps.release.outputs.tagged == 'true' }}
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          MAJOR: ${{ steps.release.outputs.major }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "v${VERSION}"
+          git tag -f "v${MAJOR}"
+          git push -f origin "v${VERSION}"
+          git push -f origin "v${MAJOR}"

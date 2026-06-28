@@ -57,6 +57,24 @@ test("rejects duplicate tagPrefix (tags would collide)", () => {
   );
 });
 
+test("accepts and preserves extraFiles", () => {
+  const c = validateConfig({
+    trackedProjects: [{ path: ".", tagPrefix: "tool", extraFiles: ["dist/**", "action.yml"] }],
+  });
+  assert.deepEqual(c.trackedProjects[0]?.extraFiles, ["dist/**", "action.yml"]);
+});
+
+test("rejects malformed extraFiles", () => {
+  assert.throws(
+    () => validateConfig({ trackedProjects: [{ path: ".", tagPrefix: "t", extraFiles: "dist/**" }] }),
+    /extraFiles must be an array/,
+  );
+  assert.throws(
+    () => validateConfig({ trackedProjects: [{ path: ".", tagPrefix: "t", extraFiles: [""] }] }),
+    /extraFiles must be an array/,
+  );
+});
+
 test("rejects duplicate path (projects would overwrite each other)", () => {
   assert.throws(
     () =>

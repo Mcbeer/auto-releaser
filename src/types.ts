@@ -29,6 +29,12 @@ export interface Logger {
 export interface TrackedProject {
   readonly path: string; // repo-relative
   readonly tagPrefix: string;
+  /**
+   * Extra repo-relative globs to include in this project's release PR commit,
+   * beyond package.json + CHANGELOG.md (e.g. built artifacts like "dist/**").
+   * Mirrors release-please's extra-files. Optional.
+   */
+  readonly extraFiles?: readonly string[];
 }
 
 export interface ReleaseConfig {
@@ -89,3 +95,4 @@ export interface ChangelogRenderer {
   readonly name: string;
   render(release: ComputedRelease, ctx: ReleaseContext): string;
 }
+// dogfood feature

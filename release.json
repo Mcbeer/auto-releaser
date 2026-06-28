@@ -1,0 +1,9 @@
+{
+  "trackedProjects": [
+    {
+      "path": ".",
+      "tagPrefix": "dep-aware-release",
+      "extraFiles": ["dist/**"]
+    }
+  ]
+}

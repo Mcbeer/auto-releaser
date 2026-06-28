@@ -95,7 +95,17 @@ function validateTrackedProjects(v: unknown): TrackedProject[] {
     }
     seenPrefixes.add(tagPrefix);
     seenPaths.add(path);
-    return { path, tagPrefix };
+
+    const rawExtra = e["extraFiles"];
+    let extraFiles: string[] | undefined;
+    if (rawExtra !== undefined) {
+      if (!Array.isArray(rawExtra) || rawExtra.some((g) => typeof g !== "string" || g.trim() === "")) {
+        throw new ConfigError(`trackedProjects[${i}].extraFiles must be an array of non-empty strings.`);
+      }
+      extraFiles = rawExtra as string[];
+    }
+
+    return extraFiles ? { path, tagPrefix, extraFiles } : { path, tagPrefix };
   });
 }
 

@@ -40,6 +40,9 @@ export async function handlePush(
   gw: GitHubGateway,
   baseBranch: string,
   results: readonly ProjectResult[],
+  // Resolves a project's extra repo-relative files (globs already expanded).
+  // Pure-testable: the action wires the real fs.globSync-based resolver.
+  extraFilesFor: (projectPath: string) => readonly string[] = () => [],
 ): Promise<{ tagPrefix: string; prNumber: number }[]> {
   const touched: { tagPrefix: string; prNumber: number }[] = [];
 
@@ -48,13 +51,19 @@ export async function handlePush(
     const head = releaseBranch(r.tagPrefix);
     const version = r.release.nextVersion;
 
+    const files = [
+      `${r.projectPath}/package.json`,
+      `${r.projectPath}/CHANGELOG.md`,
+      ...extraFilesFor(r.projectPath),
+    ];
+
     const { number } = await gw.upsertPullRequest({
       headBranch: head,
       baseBranch,
       title: `chore(release): ${r.tagPrefix} ${version}`,
       body: r.notes,
       // Only this project's files — paths are guaranteed non-overlapping.
-      files: [`${r.projectPath}/package.json`, `${r.projectPath}/CHANGELOG.md`],
+      files,
       commitMessage: `chore(release): ${r.tagPrefix} ${version}`,
       labels: ["release"],
     });

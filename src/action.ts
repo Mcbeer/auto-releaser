@@ -47,8 +47,21 @@ async function main(): Promise<void> {
       config.trackedProjects,
       (p) => readVersion(repoRoot, p),
     );
-    if (out === null) core.info("Merged PR is not a release branch; ignoring.");
-    else core.info(`${out.created ? "Created" : "Already exists"}: ${out.tag}`);
+    if (out === null) {
+      core.info("Merged PR is not a release branch; ignoring.");
+      core.setOutput("tagged", "false");
+    } else {
+      core.info(`${out.created ? "Created" : "Already exists"}: ${out.tag}`);
+      // Emit so a self-hosting / action-publishing workflow can derive its own
+      // floating-major + semver tags (e.g. v1, v1.2.3) from the native tag.
+      core.setOutput("tagged", String(out.created));
+      core.setOutput("tag", out.tag);
+      const m = /-v(\d+)\.(\d+)\.(\d+)$/.exec(out.tag);
+      if (m) {
+        core.setOutput("version", `${m[1]}.${m[2]}.${m[3]}`);
+        core.setOutput("major", m[1]!);
+      }
+    }
     return;
   }
 
@@ -77,8 +90,21 @@ async function main(): Promise<void> {
   const { applyResult } = await import("./writers.ts");
   for (const r of results) applyResult(repoRoot, r);
 
+  // Resolve each project's extraFiles globs (e.g. "dist/**") to concrete
+  // repo-relative paths, so built artifacts ride in the release PR commit.
+  const { globSync } = await import("node:fs");
+  const extraFilesFor = (projectPath: string): string[] => {
+    const proj = config.trackedProjects.find((p) => p.path === projectPath);
+    const globs = proj?.extraFiles ?? [];
+    const files = new Set<string>();
+    for (const g of globs) {
+      for (const f of globSync(g, { cwd: repoRoot })) files.add(f);
+    }
+    return [...files];
+  };
+
   const baseBranch = github.context.ref.replace("refs/heads/", "");
-  const touched = await handlePush(gateway, baseBranch, results);
+  const touched = await handlePush(gateway, baseBranch, results, extraFilesFor);
 
   core.setOutput("hasChanges", String(touched.length > 0));
   core.setOutput("releasePRs", JSON.stringify(touched));

@@ -24017,7 +24017,15 @@ function validateTrackedProjects(v) {
     }
     seenPrefixes.add(tagPrefix);
     seenPaths.add(path);
-    return { path, tagPrefix };
+    const rawExtra = e["extraFiles"];
+    let extraFiles;
+    if (rawExtra !== void 0) {
+      if (!Array.isArray(rawExtra) || rawExtra.some((g) => typeof g !== "string" || g.trim() === "")) {
+        throw new ConfigError(`trackedProjects[${i}].extraFiles must be an array of non-empty strings.`);
+      }
+      extraFiles = rawExtra;
+    }
+    return extraFiles ? { path, tagPrefix, extraFiles } : { path, tagPrefix };
   });
 }
 function validateCommitTypes(v) {
@@ -24423,19 +24431,24 @@ function isReleaseBranch(headRef) {
 function isReleaseCommit(headCommitMessage) {
   return headCommitMessage.startsWith("chore(release):");
 }
-async function handlePush(gw, baseBranch, results) {
+async function handlePush(gw, baseBranch, results, extraFilesFor = () => []) {
   const touched = [];
   for (const r of results) {
     if (r.release === null) continue;
     const head = releaseBranch(r.tagPrefix);
     const version = r.release.nextVersion;
+    const files = [
+      `${r.projectPath}/package.json`,
+      `${r.projectPath}/CHANGELOG.md`,
+      ...extraFilesFor(r.projectPath)
+    ];
     const { number } = await gw.upsertPullRequest({
       headBranch: head,
       baseBranch,
       title: `chore(release): ${r.tagPrefix} ${version}`,
       body: r.notes,
       // Only this project's files — paths are guaranteed non-overlapping.
-      files: [`${r.projectPath}/package.json`, `${r.projectPath}/CHANGELOG.md`],
+      files,
       commitMessage: `chore(release): ${r.tagPrefix} ${version}`,
       labels: ["release"]
     });
@@ -24484,8 +24497,19 @@ async function main() {
       config.trackedProjects,
       (p) => readVersion2(repoRoot, p)
     );
-    if (out === null) core.info("Merged PR is not a release branch; ignoring.");
-    else core.info(`${out.created ? "Created" : "Already exists"}: ${out.tag}`);
+    if (out === null) {
+      core.info("Merged PR is not a release branch; ignoring.");
+      core.setOutput("tagged", "false");
+    } else {
+      core.info(`${out.created ? "Created" : "Already exists"}: ${out.tag}`);
+      core.setOutput("tagged", String(out.created));
+      core.setOutput("tag", out.tag);
+      const m = /-v(\d+)\.(\d+)\.(\d+)$/.exec(out.tag);
+      if (m) {
+        core.setOutput("version", `${m[1]}.${m[2]}.${m[3]}`);
+        core.setOutput("major", m[1]);
+      }
+    }
     return;
   }
   const headCommitMessage = github.context.payload.head_commit?.message ?? "";
@@ -24506,8 +24530,18 @@ async function main() {
   });
   const { applyResult: applyResult2 } = await Promise.resolve().then(() => (init_writers(), writers_exports));
   for (const r of results) applyResult2(repoRoot, r);
+  const { globSync } = await import("node:fs");
+  const extraFilesFor = (projectPath) => {
+    const proj = config.trackedProjects.find((p) => p.path === projectPath);
+    const globs = proj?.extraFiles ?? [];
+    const files = /* @__PURE__ */ new Set();
+    for (const g of globs) {
+      for (const f of globSync(g, { cwd: repoRoot })) files.add(f);
+    }
+    return [...files];
+  };
   const baseBranch = github.context.ref.replace("refs/heads/", "");
-  const touched = await handlePush(gateway, baseBranch, results);
+  const touched = await handlePush(gateway, baseBranch, results, extraFilesFor);
   core.setOutput("hasChanges", String(touched.length > 0));
   core.setOutput("releasePRs", JSON.stringify(touched));
   for (const t of touched) core.info(`release PR #${t.prNumber} for ${t.tagPrefix}`);
