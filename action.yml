@@ -1,0 +1,27 @@
+name: "Dependency-Aware Release"
+description: "Automated semantic versioning + changelog + release PRs, where a change to a bundled internal workspace dependency bumps the product that ships it."
+author: "LEGO"
+
+inputs:
+  token:
+    description: "GitHub token with contents:write and pull-requests:write. Use a PAT if you need release PRs to trigger other workflows."
+    required: true
+    default: ${{ github.token }}
+  config:
+    description: "Path to release.json, relative to the repo root."
+    required: false
+    default: "release.json"
+
+outputs:
+  hasChanges:
+    description: "true if any release PR was created or updated (push events)."
+  releasePRs:
+    description: "JSON array of { tagPrefix, prNumber } touched on this run."
+
+runs:
+  using: "node20"
+  main: "dist/index.js"
+
+branding:
+  icon: "tag"
+  color: "red"
