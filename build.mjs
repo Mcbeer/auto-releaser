@@ -6,7 +6,7 @@ await build({
   entryPoints: ["src/action.ts"],
   bundle: true,
   platform: "node",
-  target: "node20",
+  target: "node24",
   // ESM to match package.json "type":"module" — a CJS bundle would hit
   // "require is not defined" at runtime (verified failure on real Actions).
   format: "esm",

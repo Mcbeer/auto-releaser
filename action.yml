@@ -19,7 +19,7 @@ outputs:
     description: "JSON array of { tagPrefix, prNumber } touched on this run."
 
 runs:
-  using: "node20"
+  using: "node24"
   main: "dist/index.js"
 
 branding:
