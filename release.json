@@ -2,7 +2,7 @@
   "trackedProjects": [
     {
       "path": ".",
-      "tagPrefix": "dep-aware-release",
+      "tagPrefix": "auto-releaser",
       "extraFiles": ["dist/**"]
     }
   ]

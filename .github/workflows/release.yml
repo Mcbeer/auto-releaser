@@ -1,10 +1,10 @@
 # Dogfooding: this action releases ITSELF. Tracks the repo as a single root
-# project (release.json: path ".", tagPrefix "dep-aware-release", extraFiles
+# project (release.json: path ".", tagPrefix "auto-releaser", extraFiles
 # ["dist/**"] so the rebuilt bundle ships in the release PR).
 #
 # On push: build dist, then run the action (local ./) to open/update the release
 # PR (which includes dist/). On release-PR merge: the action creates the native
-# tag dep-aware-release-vX.Y.Z, and we derive the action-facing v1 / vX.Y.Z tags
+# tag auto-releaser-vX.Y.Z, and we derive the action-facing v1 / vX.Y.Z tags
 # from its outputs so `uses: Mcbeer/auto-releaser@v1` keeps working.
 name: release
 
