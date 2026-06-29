@@ -96,3 +96,4 @@ export interface ChangelogRenderer {
   render(release: ComputedRelease, ctx: ReleaseContext): string;
 }
 // dogfood feature
+// trigger real self-release to verify branch name
