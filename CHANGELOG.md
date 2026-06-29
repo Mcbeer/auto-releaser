@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+### @mcbeer/auto-releaser
+
+- confirm release/auto-releaser branch end-to-end
+
 ## 1.1.0
 
 ### @lego/dep-aware-release
