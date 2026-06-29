@@ -10,8 +10,8 @@ app, so the app's version must bump — automatically, with no manual changeset 
 no versioning forced onto the internal packages.
 
 > Full rationale and the rejected-alternatives analysis live in
-> [`DEP-AWARE-RELEASE-TOOL-DESIGN.md`](./DEP-AWARE-RELEASE-TOOL-DESIGN.md). Design decisions,
-> verifications, and known gaps live in [`EXTENSIBILITY-DESIGN.md`](./EXTENSIBILITY-DESIGN.md).
+> [`docs/DEP-AWARE-RELEASE-TOOL-DESIGN.md`](./docs/DEP-AWARE-RELEASE-TOOL-DESIGN.md). Design decisions,
+> verifications, and known gaps live in [`docs/EXTENSIBILITY-DESIGN.md`](./docs/EXTENSIBILITY-DESIGN.md).
 
 ---
 
@@ -140,7 +140,7 @@ sequenceDiagram
 **The race guard:** merging a release PR pushes to `main` *and* fires the `pull_request:closed`
 event. The push run skips any `chore(release):` commit, so it never re-bumps on top of an
 un-tagged release commit; the merge handler creates the tag. (Verified on real Actions — a
-missing guard produced a real spurious re-bump during development; see `EXTENSIBILITY-DESIGN.md`.)
+missing guard produced a real spurious re-bump during development; see `docs/EXTENSIBILITY-DESIGN.md`.)
 
 ---
 
@@ -290,7 +290,7 @@ pnpm coverage    # tests + coverage (src is ~100% line/func)
 ## Status & known limitations
 
 Validated end-to-end on real GitHub (single- and multi-project) in a sandbox pnpm workspace.
-Honest gaps, tracked in `EXTENSIBILITY-DESIGN.md`:
+Honest gaps, tracked in `docs/EXTENSIBILITY-DESIGN.md`:
 
 - Closure resolver verified on pnpm **9.x, 10-compatible, and 11.x** (latest); the `pnpm -r list
   --only-projects` command + output are identical across these majors. The built-in resolver

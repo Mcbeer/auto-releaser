@@ -1,4 +1,4 @@
-// Core contracts. See EXTENSIBILITY-DESIGN.md §3.
+// Core contracts. See docs/EXTENSIBILITY-DESIGN.md §3.
 // All interfaces here are the public-shaped seams; the closure algorithm is NOT a seam (shared).
 
 /** Read-only git access. A capability interface so it stays mockable + additive. */

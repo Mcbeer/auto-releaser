@@ -1,5 +1,5 @@
 // The public seam. v1 registers only built-ins; "going public" later = external
-// .register() calls with zero interface change. See EXTENSIBILITY-DESIGN.md §1.
+// .register() calls with zero interface change. See docs/EXTENSIBILITY-DESIGN.md §1.
 export class Registry<T extends { name: string }> {
   #impls = new Map<string, T>();
 

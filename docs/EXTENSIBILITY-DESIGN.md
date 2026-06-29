@@ -1,4 +1,4 @@
-# Extensibility & Resolver Design — Companion to DEP-AWARE-RELEASE-TOOL-DESIGN.md
+# Extensibility & Resolver Design — Companion to DEP-AWARE-RELEASE-TOOL-DESIGN.md (in this docs/ folder)
 
 ## Status
 
