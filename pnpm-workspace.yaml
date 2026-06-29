@@ -1,0 +1,12 @@
+allowBuilds:
+  esbuild: set this to true or false
+# Not a workspace (no packages:); this file holds pnpm 10/11 settings, which
+# moved here from package.json's "pnpm" field.
+#
+# esbuild ships a postinstall that builds its native binary. We only use esbuild
+# via its JS API (build.mjs), which works without that native build (verified),
+# so we don't require it. strictDepBuilds:false stops pnpm 11 from treating the
+# skipped build as a fatal install error.
+onlyBuiltDependencies:
+  - esbuild
+strictDepBuilds: false

@@ -292,7 +292,9 @@ pnpm coverage    # tests + coverage (src is ~100% line/func)
 Validated end-to-end on real GitHub (single- and multi-project) in a sandbox pnpm workspace.
 Honest gaps, tracked in `EXTENSIBILITY-DESIGN.md`:
 
-- Closure resolver verified on pnpm 11.x; **not yet on the target repo's pnpm 9.x**.
+- Closure resolver verified on pnpm **9.x, 10-compatible, and 11.x** (latest); the `pnpm -r list
+  --only-projects` command + output are identical across these majors. The built-in resolver
+  targets latest pnpm; a repo on an older major can write its own resolver if its API ever differs.
 - Only the **pnpm** resolver is implemented (yarn/npm graph commands were probed but no adapter).
 - Distributed as a vendored CLI today; a real `uses:` Action (`action.yml`) wrapper is deferred.
 - Concurrency under rapid successive merges not stress-tested (sequential merges verified).

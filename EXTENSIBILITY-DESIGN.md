@@ -72,7 +72,9 @@ the per-PM adapter. If the closure algorithm lived in the adapter, pnpm and yarn
 
 ### 2.3 Verified pnpm adapter command
 
-✅ VERIFIED on pnpm 11.5.1 and 11.9.0 (NOT yet on the target repo's 9.x — the one remaining gap):
+✅ VERIFIED on pnpm 9.15.0 AND 11.9.0 (latest) — both the raw command and the real resolver
+module produce identical, correct closures (catalog externals excluded). The closure command/API
+is stable across pnpm 9/10/11. The built-in resolver targets latest pnpm:
 
 ```
 pnpm list --parseable --only-projects --prod --depth Infinity --filter "<pkg>..."
@@ -314,7 +316,7 @@ the critical multiline round-trip.
 
 ## 6. Remaining unverified items (do before/while implementing)
 
-1. ⚠️ Run the pnpm closure command on the **target repo's pnpm 9.x** (all testing was on 11.x).
+1. ✅ RESOLVED — pnpm closure verified on 9.15.0 AND 11.9.0 (latest); command/API stable across majors.
 2. ⚠️ yarn/npm adapters: only the *graph-reporting* commands were verified, not a full adapter.
 3. Bootstrap / first-run with no prior tag (parent doc §8.3) — still open.
 4. ⚠️ Workflow §8.5 release-PR-merge detection — load-bearing for no-drift (see §5); unbuilt.
